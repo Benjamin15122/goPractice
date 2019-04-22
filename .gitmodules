@@ -1,0 +1,3 @@
+[submodule "ptt/ptt.log"]
+	path = ptt/ptt.log
+	url = https://github.com/Benjamin15122/ptt.log.git
