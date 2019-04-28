@@ -65,6 +65,7 @@ func main() {
 				// err := cmd.Run()
 				out, err := cmd.Output()
 				if err != nil {
+					fmt.Print(err)
 					return err
 				}
 				cb := string(out)
@@ -73,6 +74,10 @@ func main() {
 					"git commit -m \"gh-review update\"&&"+
 					"git push "+cb+":gh-review")
 				out, err = git.Output()
+				if err != nil {
+					fmt.Print(err)
+					return err
+				}
 				fmt.Print("pushing code to gh-review ...\n" + string(out) + "Completed\n")
 				return nil
 			},
