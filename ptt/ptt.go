@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 
 	// "io/ioutil"
@@ -13,6 +14,11 @@ import (
 
 	"github.com/urfave/cli"
 )
+
+type Out struct {
+	Images []string `json: images`
+	Log    string   `json: log`
+}
 
 type Diff struct {
 	Diff string `json:"diff"`
@@ -25,6 +31,52 @@ type Diff struct {
 
 func hello_world(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Hello World!")
+}
+
+func commit_output(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	var sha string
+	for k, v := range r.Form {
+		fmt.Println(k)
+		if k == "sha" {
+			sha = strings.Join(v, "")
+			break
+		}
+	}
+	var cmd *exec.Cmd
+	cmd = exec.Command("/bin/bash", "-c", "git symbolic-ref --short -q HEAD")
+	out, err := cmd.Output()
+	if err != nil {
+		fmt.Print(err)
+		return
+	}
+	cb := string(out)
+
+	cmd = exec.Command("/bin/bash", "-c", "git checkout "+sha+"&&"+
+		"cp -r __out .ptt/c/ &&"+
+		"git checkout "+cb)
+	out, err = cmd.Output()
+	fmt.Print(string(out))
+	if err != nil {
+		fmt.Print(err)
+		return
+	}
+
+	cmd = exec.Command("/bin/bash", "-c", "cd .ptt/c/__out && pwd")
+	out, err = cmd.Output()
+	pwd := string(out)
+	fmt.Print("pwd:", pwd)
+	if err != nil {
+		fmt.Print(err)
+		return
+	}
+
+	f_array, f_err := filepath.Glob("/(.*)\\.(jpg|bmp|gif|ico|pcx|jpeg|tif|png|raw|tga)$/")
+	if f_err != nil {
+		fmt.Print(f_err)
+		return
+	}
+	fmt.Print(f_array)
 }
 
 func diff_commits(w http.ResponseWriter, r *http.Request) {
@@ -146,6 +198,7 @@ func main() {
 			Category: "git",
 			Action: func(c *cli.Context) {
 				http.HandleFunc("/", hello_world)
+				http.HandleFunc("/apis/commit_out", commit_output)
 				http.HandleFunc("/apis/diff_text", diff_commits) //设置访问的路由
 				err := http.ListenAndServe(":9090", nil)         //设置监听的端口
 				if err != nil {
