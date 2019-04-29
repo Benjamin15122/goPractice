@@ -31,10 +31,10 @@ plt.xlabel('Recall')# make axis labels
 plt.ylabel('Precision')
  
 #y_true和y_scores分别是gt label和predict score
-y_true = np.array([0, 0, 1, 1])
-y_scores = np.array([0.1, 0.2, 0.3, 0.6])
+y_true = np.array([1, 1, 0, 1])
+y_scores = np.array([0.1, 0.15, 0.3, 0.45])
 precision, recall, thresholds = precision_recall_curve(y_true, y_scores)
 plt.figure(1)
 plt.plot(precision, recall)
-plt.savefig('__out/auc.png')
+plt.savefig('__out/p-r.png')
 plt.show()
