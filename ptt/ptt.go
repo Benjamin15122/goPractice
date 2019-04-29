@@ -59,7 +59,7 @@ func commit_output(w http.ResponseWriter, r *http.Request) {
 	}
 	cb := string(out)
 
-	cmd = exec.Command("/bin/bash", "-c", "git add .&&git commit -m \"stage changes\"&&"+
+	cmd = exec.Command("/bin/bash", "-c", "git add .&&git commit -m \"stage changes\"&&git push&&"+
 		"git checkout "+sha+"&&"+
 		"rm -rf .ptt/c/__out &&"+
 		"cp -r __out .ptt/c/ &&"+
