@@ -61,6 +61,7 @@ func commit_output(w http.ResponseWriter, r *http.Request) {
 
 	cmd = exec.Command("/bin/bash", "-c", "git add .&&git commit -m \"stage changes\"&&"+
 		"git checkout "+sha+"&&"+
+		"rm -rf .ptt/c/__out &&"+
 		"cp -r __out .ptt/c/ &&"+
 		"git checkout "+cb)
 	out, err = cmd.Output()
