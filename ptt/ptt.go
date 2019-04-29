@@ -91,7 +91,7 @@ func commit_output(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Println("found png files: ", f_array)
 
-	if PathExist("log.txt") {
+	if PathExist(".ptt/c/__out/log.txt") {
 		fmt.Println("log status: exist")
 		res := Out{f_array, "log.txt"}
 		js, err := json.Marshal(res)
