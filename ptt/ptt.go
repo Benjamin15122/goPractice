@@ -90,15 +90,11 @@ func commit_output(w http.ResponseWriter, r *http.Request) {
 		log.Println(f_err)
 		f_array = []string{}
 		fmt.Println("png status: not found")
-	} else {
-		fmt.Println("found png files: ", f_array)
 	}
 	if l_err != nil {
 		log.Println(l_err)
 		l_array = []string{}
 		fmt.Println("log status: not found")
-	} else {
-		fmt.Println("found txt files: ", l_array)
 	}
 
 	//将查找文件名组织成json写入response
@@ -111,6 +107,9 @@ func commit_output(w http.ResponseWriter, r *http.Request) {
 		l_url := dir + "/" + l_array[i]
 		l_array[i] = l_url
 	}
+
+	fmt.Println("found png files: ", f_array)
+	fmt.Println("found txt files: ", l_array)
 
 	res := Out{f_array, l_array}
 	js, err := json.Marshal(res)
