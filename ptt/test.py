@@ -32,7 +32,7 @@ plt.ylabel('Precision')
  
 #y_true和y_scores分别是gt label和predict score
 y_true = np.array([0, 0, 1, 1])
-y_scores = np.array([0.1, 0.4, 0.35, 0.8])
+y_scores = np.array([0.1, 0.2, 0.3, 0.6])
 precision, recall, thresholds = precision_recall_curve(y_true, y_scores)
 plt.figure(1)
 plt.plot(precision, recall)
