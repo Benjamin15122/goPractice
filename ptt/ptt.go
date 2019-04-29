@@ -68,8 +68,7 @@ func commit_output(w http.ResponseWriter, r *http.Request) {
 	cb := string(out)
 
 	//添加文件提交commit，checkout到历史版本，备份文件，回到HEAD
-	cmd = exec.Command("/bin/bash", "-c", "git add .&&git commit -m \"stage changes\"&&git push&&"+
-		"git checkout "+sha+"&&"+
+	cmd = exec.Command("/bin/bash", "-c", "git checkout "+sha+"&&"+
 		"rm -rf .ptt/c/__out &&"+
 		"cp -r __out .ptt/c/ &&"+
 		"git checkout "+cb)
@@ -258,6 +257,19 @@ func main() {
 					log.Println(err)
 				}
 				fmt.Println(dir)
+			},
+		},
+		{
+			Name:  "stage",
+			Usage: "stage git change",
+			Action: func(c *cli.Context) {
+				var cmd *exec.Cmd
+				cmd = exec.Command("/bin/bash", "-c", "git add .&&git commit -m \"update\"&&git push")
+				out, err := cmd.Output()
+				if err != nil {
+					log.Fatal(err)
+				}
+				fmt.Println(string(out))
 			},
 		},
 	}
