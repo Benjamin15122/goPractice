@@ -15,6 +15,10 @@ import (
 	"github.com/urfave/cli"
 )
 
+type Err struct {
+	Error string `json: error`
+}
+
 type Out struct {
 	Images []string `json: images`
 	Log    string   `json: log`
@@ -24,10 +28,13 @@ type Diff struct {
 	Diff string `json:"diff"`
 }
 
-// type Commits struct {
-// 	Commit1 string `json:"commit1"`
-// 	Commit2 string `json:"commit2"`
-// }
+func PathExist(_path string) bool {
+	_, err := os.Stat(_path)
+	if err != nil && err.Error() == os.ErrNotExist.Error() {
+		return false
+	}
+	return true
+}
 
 func hello_world(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Hello World!")
@@ -52,31 +59,61 @@ func commit_output(w http.ResponseWriter, r *http.Request) {
 	}
 	cb := string(out)
 
-	cmd = exec.Command("/bin/bash", "-c", "git checkout "+sha+"&&"+
+	cmd = exec.Command("/bin/bash", "-c", "git add .&&git commit -m \"stage changes\"&&"+
+		"git checkout "+sha+"&&"+
 		"cp -r __out .ptt/c/ &&"+
 		"git checkout "+cb)
 	out, err = cmd.Output()
 	fmt.Print(string(out))
 	if err != nil {
-		fmt.Print(err)
+		js, _ := json.Marshal(Err{string(out)})
+		w.Write(js)
 		return
 	}
 
-	cmd = exec.Command("/bin/bash", "-c", "cd .ptt/c/__out && pwd")
-	out, err = cmd.Output()
-	pwd := string(out)
-	fmt.Print("pwd:", pwd)
-	if err != nil {
-		fmt.Print(err)
-		return
-	}
+	pwd, _ := filepath.Abs(os.Args[0])
+	fmt.Println("pwd:", pwd)
 
-	f_array, f_err := filepath.Glob("/(.*)\\.(jpg|bmp|gif|ico|pcx|jpeg|tif|png|raw|tga)$/")
+	f_array, f_err := filepath.Glob(".ptt/c/__out/*.png")
 	if f_err != nil {
-		fmt.Print(f_err)
+		fmt.Println(f_err)
+		res := Out{[]string{"array"}, "log not found"}
+		js, err := json.Marshal(res)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(js)
 		return
 	}
-	fmt.Print(f_array)
+	fmt.Println("found png files: ", f_array)
+
+	if PathExist("log.txt") {
+		fmt.Println("log status: exist")
+		res := Out{f_array, "log.txt"}
+		js, err := json.Marshal(res)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(js)
+		return
+	}
+
+	fmt.Println("log status: not found")
+	res := Out{f_array, "log not found"}
+	js, err := json.Marshal(res)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(js)
 }
 
 func diff_commits(w http.ResponseWriter, r *http.Request) {
@@ -142,7 +179,7 @@ func main() {
 			Category: "git",
 			Action: func(c *cli.Context) error {
 				var cmd *exec.Cmd
-				cmd = exec.Command("/bin/bash", "-c", "echo '/.ptt'>>.gitignore"+
+				cmd = exec.Command("/bin/bash", "-c", "echo '/.ptt'>>.gitignore &&"+
 					"mkdir .ptt &&"+
 					"cd .ptt &&"+
 					"mkdir c &&"+
@@ -155,7 +192,6 @@ func main() {
 					fmt.Print(err)
 					return err
 				}
-				fmt.Print(out)
 				return nil
 			},
 		},
