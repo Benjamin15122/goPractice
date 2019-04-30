@@ -287,11 +287,12 @@ func main() {
 			Action: func(c *cli.Context) {
 				var cmd *exec.Cmd
 				cmd = exec.Command("/bin/bash", "-c", "git add .&&git commit -m \"update\"&&git push")
-				out, err := cmd.Output()
+				cmd.Stdout = os.Stdout
+				cmd.Stderr = os.Stderr
+				err := cmd.Run()
 				if err != nil {
 					log.Fatal(err)
 				}
-				fmt.Println(string(out))
 			},
 		},
 	}
