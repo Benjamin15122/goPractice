@@ -20,14 +20,14 @@ type Err struct {
 }
 
 type Out struct {
-	Images []string `json: images`
-	Log    []string `json: log`
+	files []string `json: files`
 }
 
 type Diff struct {
 	Diff string `json:"diff"`
 }
 
+// 测试文件或目录是否存在，有bug
 func PathExist(_path string) bool {
 	_, err := os.Stat(_path)
 	if err != nil && err.Error() == os.ErrNotExist.Error() {
@@ -36,10 +36,12 @@ func PathExist(_path string) bool {
 	return true
 }
 
+// 对http请求返回helloworld
 func hello_world(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Hello World!")
 }
 
+// 请求某个commit的输出内容，返回符合要求的文件名列表
 func commit_output(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	var sha string
@@ -52,70 +54,90 @@ func commit_output(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//获取当前程序运行目录
-	dir, d_err := filepath.Abs(filepath.Dir(os.Args[0])) //返回绝对路径  filepath.Dir(os.Args[0])去除最后一个元素的路径
-	if d_err != nil {
-		log.Println(d_err)
-	}
+	// dir, d_err := filepath.Abs(filepath.Dir(os.Args[0])) //返回绝对路径  filepath.Dir(os.Args[0])去除最后一个元素的路径
+	// if d_err != nil {
+	// 	log.Println(d_err)
+	// }
 
 	//获取当前git 分支
 	var cmd *exec.Cmd
 	cmd = exec.Command("/bin/bash", "-c", "git symbolic-ref --short -q HEAD")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 	out, err := cmd.Output()
 	if err != nil {
-		fmt.Print(err)
+		js, _ := json.Marshal(Err{"fetch git HEAD ref failed, check console output for more information.\n" + err.Error()})
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(js)
 		return
 	}
 	cb := string(out)
 
-	//添加文件提交commit，checkout到历史版本，备份文件，回到HEAD
-	cmd = exec.Command("/bin/bash", "-c", "git checkout "+sha+"&&"+
-		"rm -rf .ptt/c/__out &&"+
-		"cp -r __out .ptt/c/ &&"+
-		"git checkout "+cb)
-	out, err = cmd.Output()
-	fmt.Print(string(out))
+	//	尝试checkout到指定历史版本，失败则返回错误信息
+	cmd = exec.Command("/bin/bash", "-c", "git checkout "+sha)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err = cmd.Run()
 	if err != nil {
-		js, _ := json.Marshal(Err{string(out)})
+		log.Println(err)
+		js, _ := json.Marshal(Err{"git checkout failed, maybe have unstaged files, try commit first, check backend console output for more information. \n" + err.Error()})
+		w.Header().Set("Content-Type", "application/json")
 		w.Write(js)
 		return
 	}
 
-	//在保存的文件夹中查找png和log.txt文件
-	f_array, f_err := filepath.Glob(".ptt/c/__out/*.png")
-	l_array, l_err := filepath.Glob(".ptt/c/__out/log.txt")
-
-	//若查找失败返回则response写入空数组
-	if f_err != nil {
-		log.Println(f_err)
-		f_array = []string{}
-		fmt.Println("png status: not found")
-	}
-	if l_err != nil {
-		log.Println(l_err)
-		l_array = []string{}
-		fmt.Println("log status: not found")
-	}
-
-	//将查找文件名组织成json写入response
-	for i := 0; i < len(f_array); i++ {
-		f_url := dir + "/" + f_array[i]
-		f_array[i] = f_url
-	}
-
-	for i := 0; i < len(l_array); i++ {
-		l_url := dir + "/" + l_array[i]
-		l_array[i] = l_url
-	}
-
-	fmt.Println("found png files: ", f_array)
-	fmt.Println("found txt files: ", l_array)
-
-	res := Out{f_array, l_array}
-	js, err := json.Marshal(res)
+	// 将指定版本文件存储到指定目录，并回到原分支HEAD
+	cmd = exec.Command("/bin/bash", "-c", "rm -rf .ptt/c/__out &&"+
+		"cp -r __out .ptt/c/ &&"+
+		"git checkout "+cb)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err = cmd.Run()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		js, _ := json.Marshal(Err{"save file failed," +
+			" check console output for more information.\n" +
+			err.Error()})
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(js)
 		return
 	}
+
+	//在保存的文件夹中查找json文件
+	j_array, j_err := filepath.Glob(".ptt/c/__out/*.json")
+	// l_array, l_err := filepath.Glob(".ptt/c/__out/log.txt")
+
+	//若查找失败返回则response写入空数组
+	if j_err != nil {
+		log.Println(j_err)
+		js, _ := json.Marshal(Err{"json files not found," +
+			" check backend console output for more information. \n" +
+			j_err.Error()})
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(js)
+		return
+	}
+	// if l_err != nil {
+	// 	log.Println(l_err)
+	// 	l_array = []string{}
+	// 	fmt.Println("log status: not found")
+	// }
+
+	//将查找文件名组织成json写入response
+	// for i := 0; i < len(f_array); i++ {
+	// 	f_url := dir + "/" + f_array[i]
+	// 	f_array[i] = f_url
+	// }
+
+	// for i := 0; i < len(l_array); i++ {
+	// 	l_url := dir + "/" + l_array[i]
+	// 	l_array[i] = l_url
+	// }
+
+	fmt.Println("found json files: ", j_array)
+	// fmt.Println("found txt files: ", l_array)
+
+	res := Out{j_array}
+	js, _ := json.Marshal(res)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(js)
