@@ -20,7 +20,7 @@ type Err struct {
 }
 
 type Out struct {
-	files []string `json: files`
+	Files []string `json: files`
 }
 
 type Diff struct {
@@ -85,15 +85,29 @@ func commit_output(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 将指定版本文件存储到指定目录，并回到原分支HEAD
+	// 将指定版本文件存储到指定目录
 	cmd = exec.Command("/bin/bash", "-c", "rm -rf .ptt/c/__out &&"+
-		"cp -r __out .ptt/c/ &&"+
-		"git checkout "+cb)
+		"cp -r __out .ptt/c/ &&")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	err = cmd.Run()
 	if err != nil {
 		js, _ := json.Marshal(Err{"save file failed," +
+			" check console output for more information.\n" +
+			err.Error()})
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(js)
+		return
+	}
+	fmt.Println("save file succeeded, ready to serve")
+
+	// 返回原分支HEAD
+	cmd = exec.Command("/bin/bash", "-c", "git checkout "+cb)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err = cmd.Run()
+	if err != nil {
+		js, _ := json.Marshal(Err{"git checkout to HEAD failed," +
 			" check console output for more information.\n" +
 			err.Error()})
 		w.Header().Set("Content-Type", "application/json")
