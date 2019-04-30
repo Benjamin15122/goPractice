@@ -62,8 +62,7 @@ func commit_output(w http.ResponseWriter, r *http.Request) {
 	//获取当前git 分支
 	var cmd *exec.Cmd
 	cmd = exec.Command("/bin/bash", "-c", "git symbolic-ref --short -q HEAD")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+
 	out, err := cmd.Output()
 	if err != nil {
 		js, _ := json.Marshal(Err{"fetch git HEAD ref failed, check console output for more information.\n" + err.Error()})
