@@ -87,7 +87,7 @@ func commit_output(w http.ResponseWriter, r *http.Request) {
 
 	// 将指定版本文件存储到指定目录
 	cmd = exec.Command("/bin/bash", "-c", "rm -rf .ptt/c/__out &&"+
-		"cp -r __out .ptt/c/ &&")
+		"cp -r __out .ptt/c/ ")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	err = cmd.Run()
